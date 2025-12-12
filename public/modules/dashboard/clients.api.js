@@ -3,31 +3,58 @@
 // Importamos la API_URL del nuevo backend
 import { supabase, API_URL } from '../../core/supabase.js';
 
-// Función genérica para manejar el fetch a la API
+// --- FUNCIÓN CENTRAL DE FETCH CON RESILIENCIA (NUEVO) ---
 const fetchApi = async (path, method = 'GET', body = null) => {
-    try {
-        const response = await fetch(`${API_URL}/clients${path}`, {
-            method: method,
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: body ? JSON.stringify(body) : null
-        });
-        
-        const data = await response.json();
-        
-        if (!response.ok || data.error) {
-            console.error(`API Error on ${path}:`, data.error || response.statusText);
-            return { data: null, error: data.error || new Error(response.statusText) };
-        }
-        
-        // La API devuelve { success: true, data: [...] }
-        return { data: data.data || [], error: null };
+    let attempts = 0;
+    const maxAttempts = 5; // Intentaremos hasta 5 veces
+    
+    while (attempts < maxAttempts) {
+        try {
+            const response = await fetch(`${API_URL}/clients${path}`, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: body ? JSON.stringify(body) : null
+            });
 
-    } catch (error) {
-        console.error(`Fetch failed for ${path}:`, error);
-        return { data: null, error };
+            // Si el servidor Express responde con éxito, devolvemos los datos.
+            if (response.ok) {
+                 const data = await response.json();
+                 
+                 // Manejamos errores lógicos o fallos de la DB reportados por la API
+                 if (data.success === false) {
+                    console.error(`API Error:`, data.error);
+                    throw new Error(data.message || data.error || 'Error interno de la API.');
+                 }
+                 
+                 // ÉXITO: Devolvemos los datos
+                 return { data: data.data || data, error: null };
+            } 
+            
+            // Si hay un error 500 o de conexión (que causa ECONNRESET), reintentamos
+            if (response.status === 500 || response.status === 503) {
+                throw new Error('Internal Server Error (Backend warming up).');
+            }
+
+            // Para otros errores HTTP (400s)
+            throw new Error(`HTTP Error: ${response.status}`);
+
+        } catch (error) {
+            attempts++;
+            if (attempts >= maxAttempts) {
+                console.error(`Fetch falló después de ${maxAttempts} intentos para ${path}:`, error);
+                // NOTA: EL ERROR DE CONEXIÓN TERMINA AQUÍ.
+                return { data: null, error: new Error(`No se pudo conectar a la API después de ${maxAttempts} intentos. El servidor de Node.js no está estable.`) };
+            }
+
+            // Espera exponencial: 1s, 2s, 4s, 8s, 16s...
+            const delay = Math.pow(2, attempts) * 500; 
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
     }
+    // Devolvemos fallo si el ciclo termina
+    return { data: null, error: new Error("La conexión a la API falló inesperadamente.") };
 };
 
 
@@ -55,38 +82,31 @@ export const searchClients = async (searchTerm) => {
     return data || [];
 };
 
-/**
- * Obtiene detalles profundos de un cliente.
- * NOTA: POR AHORA DEVUELVE NULL. Debes crear la ruta /api/clients/:id en Node.js.
- */
+// --- PENDIENTES DE IMPLEMENTACIÓN DE RUTA ---
 export const getClientDetails = async (clientId) => {
-    // Ruta pendiente de implementación: GET /api/clients/details/:id
-    return null;
+    // ESTA RUTA DEBE SER IMPLEMENTADA EN EL BACKEND
+    const { data, error } = await fetchApi(`/details/${clientId}`);
+    // Simulación de estructura esperada por el frontend para no fallar
+    if (error) return null;
+    return {
+        profile: data[0] || {}, 
+        pets: data[1] || [], 
+        appointments: data[2] || []
+    };
 };
 
-/**
- * Registra cliente nuevo (Usa POST /api/clients/register).
- */
 export const registerClientFromDashboard = async (clientData) => {
     const { error } = await fetchApi('/register', 'POST', clientData);
     if (error) return { success: false, error };
     return { success: true };
 };
 
-/**
- * Actualiza perfil.
- * NOTA: POR AHORA DEVUELVE FALLO. Debes crear la ruta PUT/PATCH /api/clients/:id.
- */
 export const updateClientProfile = async (clientId, profileData) => {
-    const { error } = await fetchApi(`/${clientId}`, 'PUT', profileData);
+    const { error } = await fetchApi(`/update/${clientId}`, 'PUT', profileData);
     if (error) return { success: false, error };
     return { success: true };
 };
 
-/**
- * Elimina cliente.
- * NOTA: POR AHORA DEVUELVE FALLO. Debes crear la ruta DELETE /api/clients/:id.
- */
 export const deleteClient = async (clientId) => {
     const { error } = await fetchApi(`/${clientId}`, 'DELETE');
     if (error) return { success: false, error };

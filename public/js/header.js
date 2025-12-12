@@ -1,4 +1,8 @@
+// public/js/header.js
 import { supabase } from '../core/supabase.js';
+// Importamos la función que obtiene el usuario y perfil
+import { getAuthenticatedUser } from '../modules/login/login.api.js';
+
 
 /**
  * Inicializa el header con toda su lógica
@@ -9,7 +13,7 @@ export const initHeader = async () => {
     // Obtener elementos del DOM
     const guestNav = document.getElementById('guest-nav');
     const userNav = document.getElementById('user-nav');
-    const dashboardLink = document.getElementById('dashboard-link'); // El botón que buscamos
+    const dashboardLink = document.getElementById('dashboard-link'); 
     
     const userInitial = document.getElementById('user-initial');
     const userRoleLabel = document.getElementById('user-role-label'); 
@@ -28,66 +32,50 @@ export const initHeader = async () => {
         return false;
     }
 
-    // Verificar sesión
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (user) {
+    // Verificar sesión usando la nueva función
+    const { user, profile, error: authError } = await getAuthenticatedUser();
+    
+    if (user && profile) {
         // -- USUARIO LOGUEADO --
         console.log('✅ [Header] Usuario autenticado:', user.email);
         
         guestNav.classList.add('hidden');
         userNav.classList.remove('hidden');
-        userNav.style.display = 'flex'; // Forzar visualización flex
+        userNav.style.display = 'flex'; 
 
-        // Obtener datos del perfil
-        const { data: profile, error } = await supabase
-            .from('profiles')
-            .select('first_name, last_name, full_name, role')
-            .eq('id', user.id)
-            .single();
+        
+        console.log('👤 [Header] Perfil cargado. Rol:', profile.role);
+            
+        // 1. Iniciales
+        const displayName = (profile.first_name && profile.last_name) 
+            ? `${profile.first_name} ${profile.last_name}` 
+            : profile.full_name;
+        const initial = displayName ? displayName.charAt(0).toUpperCase() : 'U';
+        if (userInitial) userInitial.textContent = initial;
 
-        if (error) {
-            console.error('❌ [Header] Error al cargar perfil:', error);
+        // 2. Etiqueta de Rol en menú
+        if (userRoleLabel) {
+            userRoleLabel.textContent = profile.role ? profile.role.toUpperCase() : 'CLIENTE';
         }
 
-        if (profile) {
-            console.log('👤 [Header] Perfil cargado. Rol:', profile.role);
+        // 3. LÓGICA DEL BOTÓN DASHBOARD
+        if (dashboardLink) {
+            const role = (profile.role || '').toLowerCase().trim();
             
-            // 1. Iniciales
-            const displayName = (profile.first_name && profile.last_name) 
-                ? `${profile.first_name} ${profile.last_name}` 
-                : profile.full_name;
-            const initial = displayName ? displayName.charAt(0).toUpperCase() : 'U';
-            if (userInitial) userInitial.textContent = initial;
-
-            // 2. Etiqueta de Rol en menú
-            if (userRoleLabel) {
-                userRoleLabel.textContent = profile.role ? profile.role.toUpperCase() : 'CLIENTE';
-            }
-
-            // 3. LÓGICA DEL BOTÓN DASHBOARD
-            if (dashboardLink) {
-                // Normalizar el rol a minúsculas por si acaso
-                const role = (profile.role || '').toLowerCase().trim();
-                
-                if (role === 'dueño' || role === 'admin') {
-                    console.log('🔓 [Header] Acceso ADMIN concedido. Mostrando botón.');
-                    dashboardLink.href = '/public/modules/dashboard/dashboard-overview.html';
-                    dashboardLink.classList.remove('hidden');
-                    dashboardLink.style.display = 'flex'; 
-                } else if (role === 'empleado') {
-                    console.log('🔓 [Header] Acceso EMPLEADO concedido. Mostrando botón.');
-                    dashboardLink.href = '/public/modules/employee/dashboard.html';
-                    dashboardLink.classList.remove('hidden');
-                    dashboardLink.style.display = 'flex';
-                } else {
-                    console.log('🔒 [Header] Usuario es CLIENTE. Ocultando botón Dashboard.');
-                    dashboardLink.classList.add('hidden');
-                    dashboardLink.style.display = 'none';
-                }
+            if (role === 'dueño' || role === 'admin') {
+                dashboardLink.href = '/public/modules/dashboard/dashboard-overview.html';
+                dashboardLink.classList.remove('hidden');
+                dashboardLink.style.display = 'flex'; 
+            } else if (role === 'empleado') {
+                dashboardLink.href = '/public/modules/employee/dashboard.html';
+                dashboardLink.classList.remove('hidden');
+                dashboardLink.style.display = 'flex';
             } else {
-                console.error('❌ [Header] No se encontró el elemento HTML #dashboard-link');
+                dashboardLink.classList.add('hidden');
+                dashboardLink.style.display = 'none';
             }
+        } else {
+            console.error('❌ [Header] No se encontró el elemento HTML #dashboard-link');
         }
     } else {
         // -- USUARIO NO LOGUEADO --
@@ -119,7 +107,7 @@ export const initHeader = async () => {
     if (logoutBtn) {
         logoutBtn.addEventListener('click', async (e) => {
             e.preventDefault();
-            await supabase.auth.signOut();
+            // Esto solo limpia localStorage y redirige. El logout del backend se hará después.
             localStorage.clear();
             sessionStorage.clear();
             window.location.href = '/public/index.html';

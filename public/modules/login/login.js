@@ -1,6 +1,9 @@
 import { supabase } from './login.api.js';
 import { redirectToDashboard } from '../../core/redirect.js';
 import { recoverPassword } from './password-recovery.api.js';
+// CORRECCIÓN: Importamos la función signInUser para usarla en el submit
+import { signInUser } from './login.api.js'; 
+
 
 // --- REDIRECCIÓN INMEDIATA SI YA ESTÁ LOGUEADO ---
 document.addEventListener('DOMContentLoaded', redirectToDashboard);
@@ -16,13 +19,11 @@ const forgotPasswordLink = document.querySelector('#forgot-password-link');
 const backToLoginLink = document.querySelector('#back-to-login-link');
 
 // **** INICIO DE LA NUEVA FUNCIONALIDAD ****
-// --- ELEMENTOS DEL DOM (AÑADIDOS PARA VISIBILIDAD) ---
-const loginPasswordInput = document.querySelector('#password'); // Re-usa el existente
+const loginPasswordInput = document.querySelector('#password'); 
 const loginToggleBtn = document.querySelector('#toggle-login-password');
 const loginEyeIcon = document.querySelector('#login-eye-icon');
 const loginEyeSlashIcon = document.querySelector('#login-eye-slash-icon');
 
-// --- LÓGICA PARA MOSTRAR/OCULTAR CONTRASEÑA (AÑADIDO) ---
 if (loginToggleBtn && loginPasswordInput && loginEyeIcon && loginEyeSlashIcon) {
     loginToggleBtn.addEventListener('click', () => {
         const isPassword = loginPasswordInput.type === 'password';
@@ -60,11 +61,8 @@ clientLoginForm.addEventListener('submit', async (event) => {
     const email = clientLoginForm.email.value;
     const password = clientLoginForm.password.value;
 
-    // 1. AUTENTICACIÓN CON SUPABASE
-    const { data, error } = await supabase.auth.signInWithPassword({
-        email: email,
-        password: password,
-    });
+    // 1. AUTENTICACIÓN CON LA NUEVA FUNCIÓN DE API
+    const { user, profile, error } = await signInUser(email, password);
 
     if (error) {
         console.error('Error al iniciar sesión:', error.message);
@@ -72,36 +70,31 @@ clientLoginForm.addEventListener('submit', async (event) => {
         return;
     }
 
-    // 2. VERIFICACIÓN DEL ROL Y ONBOARDING
-    if (data.user) {
-        const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('onboarding_completed, role')
-            .eq('id', data.user.id)
-            .single();
+    // 2. SIMULACIÓN DE SESIÓN LOCAL (REEMPLAZO DE setSession de Supabase)
+    if (user && profile) {
+        const authData = { 
+            id: user.id, 
+            email: user.email, 
+            role: profile.role,
+            onboarding_completed: profile.onboarding_completed
+        };
 
-        if (profileError) {
-            console.error('Error al obtener el perfil:', profileError);
-            window.location.href = '/public/index.html';
-            return;
-        }
-
-        // 3. REDIRECCIÓN BASADA EN EL ROL (AQUÍ ESTÁ LA CORRECCIÓN)
-        if (profile.role === 'dueño') {
-            // Dueños van al dashboard de administrador
+        // Guardamos la sesión en localStorage para que el frontend pueda verla
+        localStorage.setItem('ohmypet_auth', JSON.stringify(authData));
+        
+        // 3. REDIRECCIÓN BASADA EN EL ROL
+        
+        if (profile.role === 'dueño' || profile.role === 'admin') {
             window.location.href = '/public/modules/dashboard/dashboard-overview.html';
         } else if (profile.role === 'empleado') {
-            // Empleados van a su nuevo dashboard móvil
             window.location.href = '/public/modules/employee/dashboard.html';
         } else if (profile.role === 'cliente') {
-            // Clientes verifican si completaron onboarding
             if (profile.onboarding_completed) {
                 window.location.href = '/public/index.html';
             } else {
                 window.location.href = '/public/modules/profile/onboarding.html';
             }
         } else {
-            // Rol desconocido, por seguridad va al inicio
             window.location.href = '/public/index.html';
         }
     }
@@ -114,6 +107,7 @@ forgotPasswordForm.addEventListener('submit', async (event) => {
 
     const email = document.querySelector('#reset-email').value;
     
+    // NOTE: recoverPassword sigue usando la función original de Supabase (por el enlace mágico)
     const { success, error } = await recoverPassword(email);
 
     if (success) {

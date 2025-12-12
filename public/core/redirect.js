@@ -3,18 +3,18 @@
 import { supabase } from './supabase.js';
 
 const redirectToDashboard = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
+    // 1. LEER SESIÓN DESDE LOCALSTORAGE (NUEVO)
+    const authString = localStorage.getItem('ohmypet_auth');
+    if (!authString) return; 
+
+    const authData = JSON.parse(authString);
+    const user = authData.id;
+    const profile = authData; // Usamos el objeto completo como perfil
 
     if (user) {
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('role, onboarding_completed')
-            .eq('id', user.id)
-            .single();
-
         if (profile) {
             // AQUÍ ESTÁ LA CORRECCIÓN
-            if (profile.role === 'dueño') {
+            if (profile.role === 'dueño' || profile.role === 'admin') {
                 // Dueños van al dashboard de administrador
                 window.location.href = '/public/modules/dashboard/dashboard-overview.html';
             } else if (profile.role === 'empleado') {
