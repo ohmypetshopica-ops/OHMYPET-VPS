@@ -20,6 +20,9 @@ import {
     getBookedTimesForDashboard 
 } from './appointments.api.js';
 
+// 4. Utilidades (SE CORRIGE: Ahora importa createClientRow)
+import { createClientRow } from './dashboard.utils.js';
+
 // --- VARIABLES GLOBALES ---
 let isInitialized = false;
 let currentPage = 1;
@@ -131,9 +134,11 @@ const createClientRow = (client) => {
         ? `${client.first_name} ${client.last_name}` 
         : client.full_name || 'Sin nombre';
     const phone = client.phone || 'Sin teléfono';
+    // Se asume que pets_count ya viene calculado por el backend
     const petsCount = client.pets_count || 0;
     
     let lastAppointmentText = 'Sin citas';
+    // Se asume que last_appointment_date ya viene calculado por el backend
     if (client.last_appointment_date) {
         const date = new Date(client.last_appointment_date);
         lastAppointmentText = date.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -282,8 +287,8 @@ const renderClientDetailsView = (details) => {
                         <div class="grid grid-cols-1 gap-3">
                             ${uniquePets.map(pet => `
                                 <div class="flex items-center p-3 bg-gray-50 rounded-lg border border-gray-200">
-                                    <div class="h-10 w-10 bg-green-200 rounded-full flex items-center justify-center text-green-700 font-bold mr-3">
-                                        ${pet.name.charAt(0)}
+                                    <div class="h-10 w-10 bg-green-200 rounded-full flex items-center justify-center text-green-700 font-bold shrink-0">
+                                        ${pet.name.charAt(0).toUpperCase()}
                                     </div>
                                     <div>
                                         <p class="font-bold text-gray-800">${pet.name}</p>

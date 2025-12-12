@@ -30,15 +30,24 @@ const createClientRow = (client) => {
     const displayName = (client.first_name && client.last_name) 
         ? `${client.first_name} ${client.last_name}` 
         : client.full_name || 'Sin nombre';
+    // Nota: El avatar_url puede venir directo si se incluye en la consulta
     const avatarUrl = client.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=A4D0A4&color=FFFFFF`;
     const phone = client.phone || 'Sin teléfono';
-    const petsCount = client.pets_count || 0;
+    
+    // CORRECCIÓN CRÍTICA: Usamos pets_count DIRECTO desde la API
+    const petsCount = client.pets_count || 0; 
     
     let lastAppointmentText = 'Sin citas';
+    // CORRECCIÓN CRÍTICA: Usamos last_appointment_date DIRECTO
     if (client.last_appointment_date) {
         const date = new Date(client.last_appointment_date);
         lastAppointmentText = date.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
     }
+
+    const scheduleButton = petsCount > 0 
+        ? `<button class="text-green-600 hover:text-green-900 font-medium ml-4 agendar-cita-btn" data-client-id="${client.id}" data-client-name="${displayName}">Agendar Cita</button>` 
+        : `<span class="text-gray-400 text-xs ml-4 italic">Sin mascotas</span>`;
+
 
     return `
         <tr class="hover:bg-gray-50 cursor-pointer" data-client-id="${client.id}">
@@ -55,8 +64,9 @@ const createClientRow = (client) => {
                 ${petsCount} ${petsCount === 1 ? 'mascota' : 'mascotas'}
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${lastAppointmentText}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
-                <button class="text-indigo-600 hover:text-indigo-900 view-details-btn" data-client-id="${client.id}">Ver Detalles</button>
+            <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium flex items-center justify-end gap-2">
+                <button class="text-indigo-600 hover:text-indigo-900 view-details-btn font-semibold" data-client-id="${client.id}">Ver Detalles</button>
+                ${scheduleButton}
             </td>
         </tr>
     `;
@@ -119,7 +129,6 @@ const createAppointmentRow = (appointment) => {
     const status = (appointment.status || 'pendiente').toLowerCase().trim();
     const currentStyle = statusStyles[status] || statusStyles.pendiente;
     
-    // --- INICIO: CÓDIGO ACTUALIZADO ---
     let actionButtons = '';
     if (status === 'pendiente') {
         actionButtons = `
@@ -142,7 +151,6 @@ const createAppointmentRow = (appointment) => {
             <button data-action="eliminar" class="text-xs bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 transition-colors">Eliminar</button>
         `;
     }
-    // --- FIN: CÓDIGO ACTUALIZADO ---
 
     return `
         <tr data-appointment-id="${appointment.id}">
@@ -180,10 +188,7 @@ const createServiceHistoryRow = (service) => {
 
     const petName = service.pets?.name || 'Sin mascota';
     
-    // **** INICIO DE LA CORRECCIÓN ****
-    // Forzar mayúsculas en la visualización para consistencia
     const paymentMethod = (service.payment_method || 'N/A').toUpperCase();
-    // **** FIN DE LA CORRECCIÓN ****
     
     const cost = service.service_price ? `S/ ${service.service_price.toFixed(2)}` : 'N/A';
 
