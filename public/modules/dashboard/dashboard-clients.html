@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Clientes - Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+    <style>
+        :root {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .sidebar-scrollable {
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: #A4D0A4 #f1f1f1;
+        }
+
+        .sidebar-scrollable::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .sidebar-scrollable::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        .sidebar-scrollable::-webkit-scrollbar-thumb {
+            background: #A4D0A4;
+            border-radius: 3px;
+        }
+
+        .sidebar-scrollable::-webkit-scrollbar-thumb:hover {
+            background: #8BC68B;
+        }
+
+        .custom-scrollbar {
+            scrollbar-width: thin;
+            scrollbar-color: #A4D0A4 #f1f1f1;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #A4D0A4;
+            border-radius: 4px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #8BC68B;
+        }
+
+        #mobile-menu {
+            transform: translateX(-100%);
+            transition: transform 0.3s ease-in-out;
+        }
+
+        #mobile-menu.active {
+            transform: translateX(0);
+        }
+
+        #mobile-overlay {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease-in-out;
+        }
+
+        #mobile-overlay.active {
+            opacity: 0.5;
+            pointer-events: auto;
+        }
+
+        @media (max-width: 767px) {
+            #clients-table-body tr {
+                display: block;
+                margin-bottom: 1rem;
+                border: 1px solid #e5e7eb;
+                border-radius: 0.5rem;
+                padding: 1rem;
+                background: white;
+            }
+
+            #clients-table-body td {
+                display: block;
+                text-align: left !important;
+                padding: 0.5rem 0 !important;
+                border: none;
+            }
+
+            #clients-table-body td:before {
+                content: attr(data-label);
+                font-weight: 600;
+                display: block;
+                color: #6b7280;
+                font-size: 0.75rem;
+                text-transform: uppercase;
+                margin-bottom: 0.25rem;
+            }
+
+            thead {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 text-black">
+
+    <div id="mobile-overlay" class="fixed inset-0 bg-black z-40 md:hidden"></div>
+
+    <div id="mobile-menu" class="fixed inset-y-0 left-0 w-72 bg-white shadow-2xl z-50 md:hidden">
+        <div class="h-full flex flex-col">
+            <div class="h-16 flex items-center justify-between px-4 border-b border-gray-200 bg-green-50">
+                <div class="flex items-center space-x-2">
+                    <div
+                        class="h-8 w-8 bg-gradient-to-br from-green-400 to-green-600 rounded-lg flex items-center justify-center">
+                        <span class="text-white font-bold text-sm">O</span>
+                    </div>
+                    <span class="text-lg font-bold text-gray-800">OhMyPet</span>
+                </div>
+                <button id="close-mobile-menu" class="p-2 hover:bg-green-100 rounded-lg transition-colors">
+                    <svg class="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <nav id="mobile-nav-content" class="flex-1 px-3 py-4 space-y-6 overflow-y-auto">
+            </nav>
+
+            <div class="px-3 py-3 border-t border-gray-200 space-y-1 bg-gray-50 flex-shrink-0">
+                <div class="flex items-center px-3 py-2.5 rounded-lg">
+                    <div
+                        class="h-9 w-9 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center flex-shrink-0">
+                        <span class="text-white font-bold text-sm" id="mobile-user-initial">A</span>
+                    </div>
+                    <div class="ml-3 flex-1 min-w-0">
+                        <p class="text-sm font-semibold text-gray-900 truncate" id="mobile-user-name">Administrador</p>
+                        <p class="text-xs text-gray-500">Admin</p>
+                    </div>
+                </div>
+                <a href="/public" target="_blank"
+                    class="flex items-center w-full px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-green-50">
+                    <svg class="h-5 w-5 mr-3 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                    </svg>
+                    <span>Ir a la Tienda</span>
+                </a>
+                <button id="mobile-logout-button"
+                    class="flex items-center w-full px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50">
+                    <svg class="h-5 w-5 mr-3 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                    <span>Cerrar Sesión</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="flex flex-col md:flex-row h-screen overflow-hidden">
+        <div id="sidebar-container" class="hidden md:block"></div>
+
+        <main class="flex-1 flex flex-col bg-gray-50 overflow-hidden">
+            <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 z-30 shrink-0">
+                <div class="flex items-center space-x-3">
+                    <button id="mobile-menu-button" class="md:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                        <svg class="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                    </button>
+                    <h1 class="text-lg md:text-xl font-semibold text-gray-800" id="header-title">Gestión de Clientes</h1>
+                </div>
+                <div id="header-container"></div>
+            </header>
+
+            <div id="main-content" class="flex-1 p-3 md:p-6 overflow-y-auto custom-scrollbar">
+                <section id="clients" class="space-y-4 md:space-y-6">
+
+                    <div id="main-alert-message" class="hidden rounded-lg p-4 text-sm font-medium mb-4" role="alert">
+                        </div>
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                        <h2 class="text-2xl font-bold text-gray-800 hidden md:block">Gestión de Clientes</h2>
+                        <div class="flex flex-col md:flex-row gap-3 w-full md:w-auto">
+                            <input type="text" id="client-search-input" placeholder="Buscar cliente..."
+                                class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 w-full md:w-auto">
+                            <button id="add-client-button"
+                                class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 w-full md:w-auto">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 4v16m8-8H4"></path>
+                                </svg>
+                                Registrar Cliente
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-x-auto md:overflow-x-visible">
+                        <table class="w-full md:table">
+                            <thead class="bg-gray-50 md:table-header-group">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Mascotas</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Última Cita</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="clients-table-body" class="divide-y divide-gray-200 md:table-row-group"></tbody>
+                        </table>
+                    </div>
+                    
+                    <div id="pagination-container"></div>
+                    </section>
+            </div>
+        </main>
+    </div>
+
+    <div id="client-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-2xl rounded-2xl shadow-xl max-h-[90vh] overflow-y-auto">
+            <div class="bg-gradient-to-r from-green-500 to-green-600 px-6 py-4 rounded-t-2xl flex justify-between items-center">
+                <h3 class="text-xl font-bold text-white">Registrar Nuevo Cliente</h3>
+                <button id="close-client-modal-button" class="text-white hover:text-gray-200">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <form id="client-form" class="p-6">
+                <div id="client-form-message" class="hidden mb-4"></div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label for="first_name" class="block text-sm font-medium text-gray-700 mb-1">Nombres *</label>
+                        <input type="text" id="first_name" name="first_name" required
+                            class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
+                    </div>
+                    <div>
+                        <label for="last_name" class="block text-sm font-medium text-gray-700 mb-1">Apellidos *</label>
+                        <input type="text" id="last_name" name="last_name" required
+                            class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Correo Electrónico (Opcional)</label>
+                    <input type="email" id="email" name="email"
+                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
+                </div>
+
+                <div id="password-field" class="hidden mb-4">
+                    <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Contraseña (Mín. 6 caracteres)</label>
+                    <input type="password" id="password" name="password"
+                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
+                </div>
+                <div class="mb-4">
+                    <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">Teléfono *</label>
+                    <input type="tel" id="phone" name="phone" placeholder="987654321" required
+                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label for="doc_type" class="block text-sm font-medium text-gray-700 mb-1">Tipo de Documento</label>
+                        <select id="doc_type" name="doc_type"
+                            class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
+                            <option value="DNI">DNI</option>
+                            <option value="CE">Carné de Extranjería</option>
+                            <option value="Pasaporte">Pasaporte</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="doc_num" class="block text-sm font-medium text-gray-700 mb-1">Número de Documento</label>
+                        <input type="text" id="doc_num" name="doc_num" placeholder="12345678"
+                            class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label for="district" class="block text-sm font-medium text-gray-700 mb-1">Distrito *</label>
+                    <input type="text" id="district" name="district" placeholder="Ica" required
+                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div>
+                        <label for="emergency_contact_name" class="block text-sm font-medium text-gray-700 mb-1">Contacto de Emergencia</label>
+                        <input type="text" id="emergency_contact_name" name="emergency_contact_name" placeholder="Nombre completo"
+                            class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
+                    </div>
+                    <div>
+                        <label for="emergency_contact_phone" class="block text-sm font-medium text-gray-700 mb-1">Teléfono de Emergencia</label>
+                        <input type="tel" id="emergency_contact_phone" name="emergency_contact_phone" placeholder="987654321"
+                            class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
+                    </div>
+                </div>
+
+                <div class="flex gap-3">
+                    <button type="submit"
+                        class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition-colors">
+                        Registrar Cliente
+                    </button>
+                    <button type="button" id="cancel-client-button"
+                        class="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors">
+                        Cancelar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div id="client-details-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-4xl rounded-2xl shadow-xl max-h-[90vh] flex flex-col">
+            <div class="bg-gradient-to-r from-green-500 to-green-600 px-6 py-4 rounded-t-2xl flex justify-between items-center flex-shrink-0">
+                <h3 id="modal-client-name" class="text-xl font-bold text-white">Detalles del Cliente</h3>
+                <button id="modal-close-btn" class="text-white hover:text-gray-200">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto custom-scrollbar">
+                <div id="modal-content-body-view" class="p-6"></div>
+
+                <div id="client-edit-mode" class="hidden p-6">
+                    <form id="client-edit-form">
+                        <div id="edit-form-message" class="hidden mb-4"></div>
+                        <input type="hidden" name="id" id="edit-client-id">
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Nombres *</label>
+                                <input type="text" name="first_name" id="edit-first-name" required
+                                    class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Apellidos *</label>
+                                <input type="text" name="last_name" id="edit-last-name" required
+                                    class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Email (No editable)</label>
+                            <input type="email" name="email" id="edit-email" readonly
+                                class="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed">
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Teléfono *</label>
+                            <input type="tel" name="phone" id="edit-phone" required
+                                class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Documento</label>
+                                <select name="doc_type" id="edit-doc-type"
+                                    class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
+                                    <option value="DNI">DNI</option>
+                                    <option value="CE">Carné de Extranjería</option>
+                                    <option value="Pasaporte">Pasaporte</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Número de Documento</label>
+                                <input type="text" name="doc_num" id="edit-doc-num"
+                                    class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Distrito</label>
+                            <input type="text" name="district" id="edit-district"
+                                class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Contacto de Emergencia</label>
+                                <input type="text" name="emergency_contact_name" id="edit-emergency-name"
+                                    class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Teléfono de Emergencia</label>
+                                <input type="tel" name="emergency_contact_phone" id="edit-emergency-phone"
+                                    class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="bg-gray-50 px-6 py-4 flex justify-between gap-3 rounded-b-2xl border-t flex-shrink-0">
+                <div>
+                    <button id="modal-delete-client-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-lg">
+                        Eliminar Cliente
+                    </button>
+                </div>
+                <div class="flex gap-3">
+                    <button id="edit-client-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg">
+                        Editar Cliente
+                    </button>
+                    <button id="save-client-btn" class="hidden bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg">
+                        Guardar Cambios
+                    </button>
+                    <button id="cancel-edit-client-btn" class="hidden bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded-lg">
+                        Cancelar
+                    </button>
+                    <button id="modal-add-pet-btn-footer" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg">
+                        + Agregar Mascota
+                    </button>
+                </div>
+            </div>
+            </div>
+    </div>
+
+    <div id="add-pet-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-2xl rounded-2xl shadow-xl max-h-[90vh] overflow-y-auto">
+            <div class="bg-gradient-to-r from-green-500 to-green-600 px-6 py-4 rounded-t-2xl flex justify-between items-center">
+                <h3 class="text-xl font-bold text-white">Registrar Nueva Mascota</h3>
+                <button id="close-add-pet-modal-button" class="text-white hover:text-gray-200">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <form id="add-pet-form" class="p-6">
+                <div id="add-pet-form-message" class="hidden mb-4"></div>
+                <input type="hidden" id="pet-owner-id" name="owner_id">
+
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Foto de la Mascota</label>
+                    <div class="flex items-center gap-4">
+                        <img id="pet-image-preview" src="" alt="Preview" class="hidden h-20 w-20 rounded-full object-cover border-2 border-gray-300">
+                        <input type="file" id="pet-photo" accept="image/*"
+                            class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
+                        <input type="text" name="name" required
+                            class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Raza *</label>
+                        <input type="text" name="breed" required
+                            class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Sexo</label>
+                        <select name="sex"
+                            class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
+                            <option value="">Seleccionar...</option>
+                            <option value="Macho">Macho</option>
+                            <option value="Hembra">Hembra</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Fecha de Nacimiento</label>
+                        <input type="date" name="birth_date"
+                            class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
+                    </div>
+                </div>
+                
+                 <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Observaciones</label>
+                    <textarea name="observations" rows="3" placeholder="Alergias, condiciones especiales, etc."
+                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"></textarea>
+                </div>
+
+
+                <div class="flex gap-3">
+                    <button type="submit"
+                        class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition-colors">
+                        Guardar Mascota
+                    </button>
+                    <button type="button" id="cancel-add-pet-button"
+                        class="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors">
+                        Cancelar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="multi-appointment-modal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-[70] flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-2xl rounded-2xl shadow-xl max-h-[95vh] flex flex-col">
+            <div class="p-6 border-b flex-shrink-0">
+                <h2 class="text-2xl font-bold text-gray-800">Agendar Cita para Múltiples Mascotas</h2>
+                <p class="text-sm text-gray-500 mt-1">Cliente: <span id="multi-apt-client-name" class="font-semibold text-green-600"></span></p>
+                <div class="w-full bg-gray-200 rounded-full h-2.5 mt-4">
+                    <div id="multi-apt-progress-bar" class="bg-blue-500 h-2.5 rounded-full" style="width: 0%; transition: width 0.3s ease-in-out;"></div>
+                </div>
+            </div>
+
+            <form id="multi-appointment-form" class="w-full flex flex-col flex-1">
+                <div class="p-6 space-y-6 overflow-y-auto custom-scrollbar flex-1 min-h-0">
+                    <div id="multi-apt-step-1-date" class="multi-apt-step space-y-4">
+                        <h3 class="text-xl font-semibold text-gray-800 mb-4">Paso 1: Seleccionar Fecha</h3>
+                        <div class="mb-4">
+                            <label for="multi-apt-date" class="block text-sm font-medium text-gray-700 mb-1">Fecha de la Cita *</label>
+                            <input type="date" id="multi-apt-date" required
+                                class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
+                        </div>
+                        <div id="multi-apt-date-message" class="hidden p-3 rounded-lg text-sm"></div>
+                    </div>
+
+                    <div id="multi-apt-step-2-pets" class="multi-apt-step hidden space-y-4">
+                        <h3 class="text-xl font-semibold text-gray-800 mb-4">Paso 2: Seleccionar Mascotas</h3>
+                        <p class="text-sm text-gray-600">Marca las mascotas que asistirán a la cita este día:</p>
+                        <div id="multi-apt-pet-checklist" class="space-y-2 max-h-40 overflow-y-auto p-2 border rounded-lg">
+                            <p class="text-center text-gray-400">Cargando mascotas...</p>
+                        </div>
+                        <div id="multi-apt-pet-message" class="hidden p-3 rounded-lg text-sm"></div>
+                    </div>
+
+                    <div id="multi-apt-step-3-details" class="multi-apt-step hidden space-y-4">
+                        <h3 class="text-xl font-semibold text-gray-800 mb-4">Paso 3: Detalles (Mascota <span id="multi-apt-pet-counter">1</span> de <span id="multi-apt-pet-total">X</span>: <span id="multi-apt-current-pet-name" class="text-green-600"></span>)</h3>
+                        
+                        <div>
+                            <label for="multi-apt-service" class="block text-sm font-medium text-gray-700 mb-1">Servicio *</label>
+                            <select id="multi-apt-service" required
+                                class="w-full p-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-green-500">
+                                <option value="">Selecciona un servicio...</option>
+                                <option value="BAÑO">BAÑO</option>
+                                <option value="BAÑO Y CORTE">BAÑO Y CORTE</option>
+                                <option value="SERVICIO DE COLORIMETRÍA">SERVICIO DE COLORIMETRÍA</option>
+                                <option value="CORTE DE UÑAS">CORTE DE UÑAS</option>
+                                <option value="DESPARASITACIÓN">DESPARASITACIÓN</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label for="multi-apt-time" class="block text-sm font-medium text-gray-700 mb-1">Hora *</label>
+                            <select id="multi-apt-time" required
+                                class="w-full p-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-green-500"
+                                disabled>
+                                <option value="">Cargando horas disponibles...</option>
+                            </select>
+                            <p id="multi-apt-time-message" class="text-xs text-gray-500 mt-1"></p>
+                        </div>
+                        
+                        <div>
+                            <label for="multi-apt-notes" class="block text-sm font-medium text-gray-700 mb-1">Notas Adicionales (Opcional)</label>
+                            <textarea id="multi-apt-notes" rows="3"
+                                class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                                placeholder="Ej: Corte cachorro, usar champú especial, etc."></textarea>
+                        </div>
+                        
+                        <div id="multi-apt-individual-message" class="hidden p-3 rounded-lg text-sm"></div>
+                    </div>
+                </div>
+
+                <div class="bg-gray-50 px-6 py-4 flex justify-end gap-3 rounded-b-2xl border-t flex-shrink-0">
+                    <button type="button" id="multi-apt-back-btn" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-6 rounded-lg transition-colors">
+                        ⬅️ Atrás
+                    </button>
+                    <button type="button" id="multi-apt-next-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg transition-colors">
+                        Siguiente
+                    </button>
+                    <button type="button" id="multi-apt-finish-btn" class="hidden bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition-colors">
+                        Finalizar Cita
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="delete-client-confirm-modal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-[80] flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-2xl shadow-xl p-6">
+            <div class="flex items-start space-x-4">
+                <div class="flex-shrink-0 h-12 w-12 rounded-full bg-red-100 flex items-center justify-center">
+                    <svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                </div>
+                <div class="flex-1">
+                    <h3 class="text-xl font-bold text-gray-900">Eliminar Cliente</h3>
+                    <p class="text-gray-600 mt-2">
+                        ¿Estás seguro de que quieres eliminar a <strong id="delete-client-name" class="text-gray-900">...</strong>?
+                        <br>
+                        <span class="font-semibold text-red-600">¡Esta acción es permanente y eliminará a todas sus mascotas, citas e historial de ventas!</span>
+                    </p>
+                    <div id="delete-client-error-message" class="hidden rounded-lg p-3 text-sm font-medium mt-4 bg-red-100 text-red-700" role="alert"></div>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end gap-3">
+                <button type="button" id="cancel-delete-client-btn" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-6 rounded-lg">
+                    Cancelar
+                </button>
+                <button type="button" id="confirm-delete-client-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-lg">
+                    Sí, Eliminar Todo
+                </button>
+            </div>
+        </div>
+    </div>
+    <script type="module">
+        const CACHE_VERSION = Date.now();
+
+        async function loadComponent(url, containerId) {
+            try {
+                const response = await fetch(`${url}?v=${CACHE_VERSION}`, { cache: 'no-store' });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(containerId);
+                if (container) container.innerHTML = html;
+            } catch (error) {
+                console.error(`Error cargando ${url}:`, error);
+            }
+        }
+
+        function setupMobileMenu() {
+            const mobileMenuButton = document.getElementById('mobile-menu-button');
+            const closeMobileMenuButton = document.getElementById('close-mobile-menu');
+            const mobileMenu = document.getElementById('mobile-menu');
+            const mobileOverlay = document.getElementById('mobile-overlay');
+            const mobileNavContent = document.getElementById('mobile-nav-content');
+
+            const toggleMenu = (open) => {
+                if (open) {
+                    mobileMenu.classList.add('active');
+                    mobileOverlay.classList.add('active');
+                    document.body.style.overflow = 'hidden';
+                } else {
+                    mobileMenu.classList.remove('active');
+                    mobileOverlay.classList.remove('active');
+                    document.body.style.overflow = '';
+                }
+            };
+
+            mobileMenuButton?.addEventListener('click', () => toggleMenu(true));
+            closeMobileMenuButton?.addEventListener('click', () => toggleMenu(false));
+            mobileOverlay?.addEventListener('click', () => toggleMenu(false));
+
+            const sidebarContainer = document.getElementById('sidebar-container');
+            if (sidebarContainer && sidebarContainer.querySelector('nav')) {
+                const navClone = sidebarContainer.querySelector('nav').cloneNode(true);
+                mobileNavContent.appendChild(navClone);
+
+                navClone.querySelectorAll('a').forEach(link => {
+                    link.addEventListener('click', () => {
+                        if (window.innerWidth < 768) {
+                            toggleMenu(false);
+                        }
+                    });
+                });
+            }
+        }
+
+        async function initializeDashboard() {
+            await Promise.all([
+                loadComponent('/public/modules/dashboard/dashboard-sidebar.html', 'sidebar-container')
+            ]);
+
+            setupMobileMenu();
+
+            try {
+                await import(`/public/core/auth.js?v=${CACHE_VERSION}`);
+
+                const sidebarModule = await import(`./dashboard-sidebar.js?v=${CACHE_VERSION}`);
+                if (sidebarModule?.initSidebar) sidebarModule.initSidebar();
+
+                const headerModule = await import(`./dashboard-header.js?v=${CACHE_VERSION}`);
+                if (headerModule?.initializeHeader) headerModule.initializeHeader();
+
+                const pageModulePath = window.location.pathname.replace('.html', '.js');
+                await import(pageModulePath + `?v=${CACHE_VERSION}`);
+
+            } catch (error) {
+                console.error('Error inicializando los scripts del dashboard:', error);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeDashboard);
+    </script>
+    <script type="module" src="../../core/auth.js"></script>
+    <script type="module" src="./dashboard-clients.js"></script>
+</body>
+
+</html>

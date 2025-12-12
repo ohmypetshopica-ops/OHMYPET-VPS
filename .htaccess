@@ -1,0 +1,48 @@
+# ============================================
+# REDIRECCIÓN A CARPETA /PUBLIC
+# ============================================
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+
+    # 1. Si entran a la raíz del dominio, servir internamente public/index.html
+    RewriteRule ^$ public/index.html [L]
+
+    # 2. Para cualquier otra solicitud (ej: /css/style.css), si no existe en la raíz,
+    # buscarla automáticamente dentro de la carpeta /public
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
+
+# ============================================
+# SISTEMA DE CACHÉ AUTOMÁTICO
+# ============================================
+
+# Desactivar caché completamente para archivos del dashboard
+<FilesMatch "dashboard.*\.(html|js|css)$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate, max-age=0"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+    Header unset ETag
+    FileETag None
+</FilesMatch>
+
+# Desactivar caché para todos los archivos JS y HTML en general
+<FilesMatch "\.(html|js)$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate, max-age=0"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+    Header unset ETag
+    FileETag None
+</FilesMatch>
+
+# CSS con caché muy corto (1 minuto)
+<FilesMatch "\.css$">
+    Header set Cache-Control "public, max-age=60, must-revalidate"
+</FilesMatch>
+
+# Imágenes con caché de 1 hora (se actualizan menos frecuentemente)
+<FilesMatch "\.(jpg|jpeg|png|gif|svg|ico)$">
+    Header set Cache-Control "public, max-age=3600"
+</FilesMatch>

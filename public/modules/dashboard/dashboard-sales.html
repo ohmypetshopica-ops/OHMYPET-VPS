@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ventas - Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+    <style>
+        :root { font-family: 'Inter', sans-serif; }
+        .custom-scrollbar::-webkit-scrollbar { width: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e0; border-radius: 4px; }
+        #mobile-menu { transform: translateX(-100%); transition: transform 0.3s ease-in-out; }
+        #mobile-menu.active { transform: translateX(0); }
+        #mobile-overlay { opacity: 0; pointer-events: none; transition: opacity 0.3s ease-in-out; }
+        #mobile-overlay.active { opacity: 1; pointer-events: auto; }
+
+        /* --- ESTILOS PARA VISTA MÓVIL TIPO TARJETA (CUADROS) --- */
+        @media (max-width: 767px) {
+            /* Ocultar encabezados de tabla */
+            thead { display: none; }
+
+            /* Convertir filas en TARJETAS */
+            #sales-table-body tr {
+                display: flex;
+                flex-direction: column;
+                background: white;
+                margin-bottom: 1rem;
+                padding: 1.25rem;
+                border-radius: 1rem; /* Bordes redondeados como clientes */
+                border: 1px solid #E5E7EB;
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+                position: relative;
+            }
+
+            #sales-table-body td {
+                display: block;
+                width: 100%;
+                padding: 0.25rem 0;
+                border: none;
+                white-space: normal !important;
+            }
+
+            /* ORDENAMIENTO DE ELEMENTOS DENTRO DE LA TARJETA */
+            
+            /* 1. Nombre del Cliente (Grande arriba) */
+            #sales-table-body tr td:nth-child(2) {
+                order: 1;
+                font-size: 1.125rem; /* text-lg */
+                font-weight: 700;
+                color: #111827; /* gray-900 */
+                margin-bottom: 0.25rem;
+            }
+
+            /* 2. Fecha (Debajo del nombre, pequeño) */
+            #sales-table-body tr td:nth-child(1) {
+                order: 2;
+                font-size: 0.875rem; /* text-sm */
+                color: #6B7280; /* gray-500 */
+                margin-bottom: 0.75rem;
+                border-bottom: 1px solid #F3F4F6;
+                padding-bottom: 0.75rem;
+            }
+
+            /* 3. Productos (Cuerpo de la tarjeta) */
+            #sales-table-body tr td:nth-child(3) {
+                order: 3;
+                font-size: 0.9rem;
+                color: #374151; /* gray-700 */
+                margin-bottom: 0.5rem;
+                display: -webkit-box;
+                -webkit-line-clamp: 2; /* Limitar a 2 líneas */
+                -webkit-box-orient: vertical;
+                overflow: hidden;
+            }
+            #sales-table-body tr td:nth-child(3)::before {
+                content: "📦 ";
+            }
+
+            /* 4. Método de Pago */
+            #sales-table-body tr td:nth-child(5) {
+                order: 4;
+                font-size: 0.8rem;
+                color: #9CA3AF;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+                margin-bottom: 0.5rem;
+            }
+
+            /* 5. Total (Grande y Verde a la derecha o abajo) */
+            #sales-table-body tr td:nth-child(4) {
+                order: 5;
+                font-size: 1.25rem;
+                font-weight: 800;
+                color: #059669; /* green-600 */
+                text-align: left;
+                margin-bottom: 1rem;
+            }
+
+            /* 6. Botón de Acción (Ancho completo al final) */
+            #sales-table-body tr td:nth-child(6) {
+                order: 6;
+                border-top: 1px solid #F3F4F6;
+                padding-top: 1rem;
+                margin-top: 0.5rem;
+            }
+            
+            #sales-table-body tr td:nth-child(6) button {
+                width: 100%;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                background-color: #F0FDFA; /* Fondo muy suave */
+                color: #0D9488; /* Teal/Green text */
+                padding: 0.75rem;
+                border-radius: 0.5rem;
+                font-weight: 600;
+                border: 1px solid #CCFBF1;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-black">
+    <div id="mobile-overlay" class="fixed inset-0 bg-black z-40 md:hidden"></div>
+    
+    <div id="mobile-menu" class="fixed inset-y-0 left-0 w-72 bg-white shadow-2xl z-50 md:hidden overflow-y-auto">
+        <div class="h-full flex flex-col">
+            <div class="h-16 flex items-center justify-between px-4 border-b border-gray-200 bg-green-50 flex-shrink-0">
+                <div class="flex items-center space-x-2">
+                    <div class="h-8 w-8 bg-gradient-to-br from-green-400 to-green-600 rounded-lg flex items-center justify-center">
+                        <span class="text-white font-bold text-sm">O</span>
+                    </div>
+                    <span class="text-lg font-bold text-gray-800">OhMyPet</span>
+                </div>
+                <button id="close-mobile-menu" class="p-2 hover:bg-green-100 rounded-lg transition-colors">
+                    <svg class="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <nav id="mobile-nav-content" class="flex-1 px-3 py-4 space-y-6 overflow-y-auto"></nav>
+            <div class="px-3 py-3 border-t border-gray-200 space-y-1 bg-gray-50 flex-shrink-0">
+                <div class="flex items-center px-3 py-2.5 rounded-lg">
+                    <div class="h-9 w-9 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center flex-shrink-0">
+                        <span class="text-white font-bold text-sm" id="mobile-user-initial">A</span>
+                    </div>
+                    <div class="ml-3 flex-1 min-w-0">
+                        <p class="text-sm font-semibold text-gray-900 truncate" id="mobile-user-name">Administrador</p>
+                        <p class="text-xs text-gray-500">Admin</p>
+                    </div>
+                </div>
+                <a href="/public" target="_blank" class="flex items-center w-full px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-green-50">
+                    <svg class="h-5 w-5 mr-3 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                    </svg>
+                    <span>Ir a la Tienda</span>
+                </a>
+                <button id="mobile-logout-button" class="flex items-center w-full px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50">
+                    <svg class="h-5 w-5 mr-3 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                    <span>Cerrar Sesión</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="flex flex-col md:flex-row h-screen overflow-hidden">
+        <div id="sidebar-container" class="hidden md:block"></div>
+        <main class="flex-1 flex flex-col bg-gray-50 overflow-hidden">
+            <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 z-30 shrink-0">
+                <div class="flex items-center space-x-3">
+                    <button id="mobile-menu-button" class="md:hidden p-2 hover:bg-gray-100 rounded-lg">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                        </svg>
+                    </button>
+                    <h1 class="text-lg md:text-xl font-semibold text-gray-800" id="header-title">Ventas</h1>
+                </div>
+                <div id="header-container"></div>
+            </header>
+
+            <div id="main-content" class="flex-1 p-3 md:p-6 overflow-y-auto custom-scrollbar">
+                <section id="sales" class="space-y-6">
+                    <div class="flex justify-between items-center gap-3">
+                        <h2 class="text-2xl font-bold text-gray-800">Registro de Ventas</h2>
+                    </div>
+
+                    <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-4">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label for="sales-search-input" class="block text-sm font-medium text-gray-700 mb-1">Buscar Cliente/Producto</label>
+                                <input type="text" id="sales-search-input" placeholder="Nombre de cliente o producto..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-sm">
+                            </div>
+                             <div>
+                                <label for="sales-date-filter" class="block text-sm font-medium text-gray-700 mb-1">Filtrar por Fecha</label>
+                                <input type="date" id="sales-date-filter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-sm">
+                            </div>
+                            <div class="flex items-end">
+                                <button id="clear-sales-filters" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium transition-colors">
+                                    Limpiar Filtros
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-x-auto">
+                        <table class="w-full min-w-full">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Productos</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Método de Pago</th>
+                                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sales-table-body" class="divide-y divide-gray-200">
+                                <tr><td colspan="6" class="text-center py-8 text-gray-500">Cargando ventas...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div id="pagination-container" class="flex justify-center mt-6 mb-6"></div>
+
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <div id="sale-details-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-2xl rounded-2xl shadow-xl max-h-[90vh] overflow-y-auto">
+            <div class="bg-gradient-to-r from-green-500 to-green-600 px-6 py-4 rounded-t-2xl flex justify-between items-center sticky top-0 z-10">
+                <h3 class="text-xl font-bold text-white">Detalles de la Venta</h3>
+                <button id="close-sale-details-btn" class="text-white hover:text-gray-200">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+            </div>
+            <div id="sale-details-content" class="p-6"></div>
+            <div class="bg-gray-50 px-6 py-4 flex justify-end gap-3 rounded-b-2xl border-t sticky bottom-0">
+                <button id="edit-sale-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg">Editar Venta</button>
+                <button id="delete-sale-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-lg">Eliminar Venta</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="edit-sale-modal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-[60] flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-3xl rounded-2xl shadow-xl max-h-[90vh] flex flex-col">
+            <div class="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4 rounded-t-2xl flex justify-between items-center flex-shrink-0">
+                <h3 class="text-xl font-bold text-white">Editar Venta</h3>
+                <button id="close-edit-sale-btn" class="text-white hover:text-gray-200">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+            </div>
+            <form id="edit-sale-form" class="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
+                <div id="edit-sale-message" class="hidden p-3 rounded-lg text-sm"></div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="edit-sale-date" class="block text-sm font-medium text-gray-700 mb-1">Fecha de Venta</label>
+                        <input type="datetime-local" id="edit-sale-date" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label for="edit-payment-method" class="block text-sm font-medium text-gray-700 mb-1">Método de Pago</label>
+                        <select id="edit-payment-method" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white">
+                            <option value="" disabled>Seleccionar...</option>
+                            <option value="EFECTIVO">Efectivo</option>
+                            <option value="YAPE">Yape</option>
+                            <option value="PLIN">Plin</option>
+                            <option value="TARJETA">Tarjeta</option>
+                            <option value="TRANSFERENCIA">Transferencia</option>
+                            <option value="DESCONOCIDO">Desconocido</option>
+                        </select>
+                        </div>
+                </div>
+                <div>
+                    <h4 class="font-semibold text-gray-800 mb-2 border-t pt-4">Productos en esta Venta</h4>
+                    <div id="edit-sale-items-container" class="space-y-3"></div>
+                </div>
+            </form>
+            <div class="bg-gray-50 px-6 py-4 flex justify-end gap-3 rounded-b-2xl border-t flex-shrink-0">
+                <button type="button" id="cancel-edit-sale-btn" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-6 rounded-lg">Cancelar</button>
+                <button type="button" id="save-sale-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg">Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="custom-toast" class="fixed top-5 right-5 z-[80] hidden transform transition-all duration-300 ease-out translate-y-[-100%] opacity-0">
+        <div class="bg-white border-l-4 border-green-500 rounded-lg shadow-2xl p-4 flex items-center gap-3 min-w-[300px]">
+            <div class="rounded-full bg-green-100 p-2">
+                <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+            </div>
+            <div>
+                <h4 class="font-bold text-gray-800 text-sm">¡Éxito!</h4>
+                <p id="toast-message" class="text-sm text-gray-600">Operación realizada correctamente.</p>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        const CACHE_VERSION = Date.now();
+        async function loadComponent(url, containerId) {
+            try {
+                const response = await fetch(`${url}?v=${CACHE_VERSION}`, { cache: 'no-store' });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                document.getElementById(containerId).innerHTML = html;
+            } catch (error) { console.error(`Error cargando ${url}:`, error); }
+        }
+        function setupMobileMenu() {
+            const mobileMenuButton = document.getElementById('mobile-menu-button');
+            const closeMobileMenuButton = document.getElementById('close-mobile-menu');
+            const mobileMenu = document.getElementById('mobile-menu');
+            const mobileOverlay = document.getElementById('mobile-overlay');
+            const toggleMenu = (show) => {
+                if (show) {
+                    mobileMenu.classList.add('active');
+                    mobileOverlay.classList.add('active');
+                    document.body.style.overflow = 'hidden';
+                } else {
+                    mobileMenu.classList.remove('active');
+                    mobileOverlay.classList.remove('active');
+                    document.body.style.overflow = '';
+                }
+            };
+            mobileMenuButton?.addEventListener('click', () => toggleMenu(true));
+            closeMobileMenuButton?.addEventListener('click', () => toggleMenu(false));
+            mobileOverlay?.addEventListener('click', () => toggleMenu(false));
+            const sidebarContainer = document.getElementById('sidebar-container');
+            if (sidebarContainer && sidebarContainer.querySelector('nav')) {
+                const navClone = sidebarContainer.querySelector('nav').cloneNode(true);
+                document.getElementById('mobile-nav-content').appendChild(navClone);
+                navClone.querySelectorAll('a').forEach(link => {
+                    link.addEventListener('click', () => { if (window.innerWidth < 768) toggleMenu(false); });
+                });
+            }
+        }
+        async function initializeDashboard() {
+            await Promise.all([loadComponent('/public/modules/dashboard/dashboard-sidebar.html', 'sidebar-container')]);
+            setupMobileMenu();
+            try {
+                await import(`/public/core/auth.js?v=${CACHE_VERSION}`);
+                const sidebarModule = await import(`./dashboard-sidebar.js?v=${CACHE_VERSION}`);
+                if (sidebarModule?.initSidebar) sidebarModule.initSidebar();
+                const headerModule = await import(`./dashboard-header.js?v=${CACHE_VERSION}`);
+                if (headerModule?.initializeHeader) headerModule.initializeHeader();
+                await import(window.location.pathname.replace('.html', '.js') + `?v=${CACHE_VERSION}`);
+            } catch (error) { console.error('Error inicializando scripts:', error); }
+        }
+        document.addEventListener('DOMContentLoaded', initializeDashboard);
+    </script>
+</body>
+</html>
